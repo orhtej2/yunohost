@@ -1801,7 +1801,6 @@ class RubyAppResource(AppResource):
             f"{self.rbenv} latest --print '{self.version}'",
             env={"RBENV_ROOT": self.RBENV_ROOT},
         )
-        self.set_setting("ruby_version", ruby_version)
         logger.info(f"Building Ruby {ruby_version}, this may take some time...")
         self._run_script(
             "provision_or_update",
@@ -1819,10 +1818,20 @@ class RubyAppResource(AppResource):
             {self.rbenv} alias {self.app} '{ruby_version}'
         """,
         )
+        self.set_setting("ruby_version", ruby_version)
         self.garbage_collect_unused_versions()
 
     def deprovision(self, context: Dict = {}):
         self.delete_setting("ruby_version")
+        if os.path.exists(self.rbenv):
+            self._run_script(
+                "deprovision",
+                f"""
+                if {self.rbenv} alias --list | grep --quiet '{self.app} '; then
+                    {self.rbenv} alias {self.app} --remove
+                fi
+            """,
+            )
         self.garbage_collect_unused_versions()
 
     def garbage_collect_unused_versions(self):
