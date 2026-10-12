@@ -1815,16 +1815,23 @@ class RubyAppResource(AppResource):
             if {self.rbenv} alias --list | grep --quiet '{self.app} '; then
                 {self.rbenv} alias {self.app} --remove
             fi
+            {self.rbenv} alias {self.app} '{ruby_version}'
         """,
         )
-        os.system(f"RBENV_ROOT= {self.RBENV_ROOT} {self.rbenv} alias {self.app} '{ruby_version}'")
-
         self.set_setting("ruby_version", ruby_version)
-
         self.garbage_collect_unused_versions()
 
     def deprovision(self, context: Dict = {}):
         self.delete_setting("ruby_version")
+        if os.path.exists(self.rbenv):
+            self._run_script(
+                "deprovision",
+                f"""
+                if {self.rbenv} alias --list | grep --quiet '{self.app} '; then
+                    {self.rbenv} alias {self.app} --remove
+                fi
+            """,
+            )
         self.garbage_collect_unused_versions()
 
     def garbage_collect_unused_versions(self):
